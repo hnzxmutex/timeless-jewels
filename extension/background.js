@@ -10,9 +10,6 @@ const DEFAULT_SETTINGS = {
 
 // ==================== Preview Tab Management ====================
 
-// Track the single preview tab
-let previewTabId = null;
-
 /**
  * Build a hash string from params for updating an existing tab.
  * Using hash (#) instead of search params (?) avoids page reload.
@@ -41,48 +38,52 @@ function buildPreviewUrl(baseUrl, params) {
 }
 
 /**
+ * Find an existing preview tab by URL matching.
+ * Works across Service Worker restarts, tab merges, and manual opens.
+ * Returns the most recently accessed matching tab, or null.
+ */
+async function findPreviewTab(baseUrl) {
+  // Build a match pattern: e.g. "https://hnzxmutex.github.io/timeless-jewels/tree*"
+  const url = new URL(baseUrl);
+  const matchPattern = url.origin + url.pathname + '*';
+  const tabs = await chrome.tabs.query({ url: matchPattern });
+  if (tabs.length === 0) return null;
+  // Prefer the most recently accessed tab if multiple exist
+  tabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+  return tabs[0];
+}
+
+/**
  * Open or reuse a single preview tab.
  *
- * - First time: create a new tab with full URL search params.
- * - Subsequent times: focus the existing tab and update only the URL hash.
- *   Changing the hash does NOT reload the page, preserving WASM state.
- *   The frontend listens for 'hashchange' and applies the new params instantly.
+ * Uses URL-based tab discovery instead of in-memory tab ID tracking.
+ * This survives Service Worker restarts, tab group merges, and even
+ * tabs the user opened manually.
+ *
+ * - If a matching tab exists: focus it and update only the URL hash (no reload).
+ * - Otherwise: create a new tab with full URL search params.
  */
 async function openPreview(baseUrl, params, sendResponse) {
   try {
-    // Check if existing preview tab is still alive
-    if (previewTabId !== null) {
-      try {
-        const tab = await chrome.tabs.get(previewTabId);
-        // Tab exists — focus it and update only the hash (no page reload)
-        const currentUrl = new URL(tab.url);
-        const newUrl = currentUrl.origin + currentUrl.pathname + currentUrl.search + buildHash(params);
-        await chrome.tabs.update(tab.id, { active: true, url: newUrl });
-        await chrome.windows.update(tab.windowId, { focused: true });
-        sendResponse({ success: true, tabId: tab.id, reused: true });
-        return;
-      } catch (e) {
-        // Tab was closed — reset and create a new one
-        previewTabId = null;
-      }
+    const existing = await findPreviewTab(baseUrl);
+    if (existing) {
+      // Tab exists — focus it and update only the hash (no page reload)
+      const currentUrl = new URL(existing.url);
+      const newUrl = currentUrl.origin + currentUrl.pathname + currentUrl.search + buildHash(params);
+      await chrome.tabs.update(existing.id, { active: true, url: newUrl });
+      await chrome.windows.update(existing.windowId, { focused: true });
+      sendResponse({ success: true, tabId: existing.id, reused: true });
+      return;
     }
 
-    // First time — create a new tab with full URL params
+    // No matching tab — create a new one
     const tab = await chrome.tabs.create({ url: buildPreviewUrl(baseUrl, params), active: true });
-    previewTabId = tab.id;
     sendResponse({ success: true, tabId: tab.id, reused: false });
   } catch (err) {
     console.error('[Timeless Jewels] Failed to open preview tab:', err);
     sendResponse({ success: false, error: err.message });
   }
 }
-
-// Clean up previewTabId when the tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-  if (tabId === previewTabId) {
-    previewTabId = null;
-  }
-});
 
 // ==================== Settings ====================
 
