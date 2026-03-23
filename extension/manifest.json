@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Timeless Jewel Preview",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Preview Timeless Jewel effects directly on POE trade pages. WASM loads once, subsequent previews are instant.",
   "permissions": [
     "storage",
