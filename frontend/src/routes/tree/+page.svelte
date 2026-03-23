@@ -290,7 +290,10 @@
     withColors: boolean,
     only: 'notables' | 'passives' | 'all'
   ): CombinedResult[] => {
-    const mappedStats: { [key: number]: number[] } = {};
+    // For notables: group by complete stat combination (all StatsKeys together)
+    // For passives: group by individual stat (original behavior)
+    const mappedStatCombos: { [key: string]: { statKeys: number[]; nodes: number[] } } = {};
+    
     rawResults.forEach((r) => {
       if (skillTree.nodes[r.node].isKeystone) {
         return;
@@ -306,30 +309,58 @@
         }
       }
 
+      const isNotable = skillTree.nodes[r.node].isNotable;
+
       if (r.result.AlternatePassiveSkill && r.result.AlternatePassiveSkill.StatsKeys) {
-        r.result.AlternatePassiveSkill.StatsKeys.forEach((key) => {
-          mappedStats[key] = [...(mappedStats[key] || []), r.node];
-        });
+        const statsKeys = r.result.AlternatePassiveSkill.StatsKeys;
+        
+        if (isNotable) {
+          // For notables: use complete stat combination as key
+          const comboKey = statsKeys.slice().sort().join(',');
+          if (!mappedStatCombos[comboKey]) {
+            mappedStatCombos[comboKey] = { statKeys: statsKeys, nodes: [] };
+          }
+          mappedStatCombos[comboKey].nodes.push(r.node);
+        } else {
+          // For passives: group by individual stat (original behavior)
+          statsKeys.forEach((key) => {
+            const comboKey = String(key);
+            if (!mappedStatCombos[comboKey]) {
+              mappedStatCombos[comboKey] = { statKeys: [key], nodes: [] };
+            }
+            mappedStatCombos[comboKey].nodes.push(r.node);
+          });
+        }
       }
 
       if (r.result.AlternatePassiveAdditionInformations) {
         r.result.AlternatePassiveAdditionInformations.forEach((info) => {
           if (info.AlternatePassiveAddition.StatsKeys) {
+            // Additions are always single stats (small nodes)
             info.AlternatePassiveAddition.StatsKeys.forEach((key) => {
-              mappedStats[key] = [...(mappedStats[key] || []), r.node];
+              const comboKey = String(key);
+              if (!mappedStatCombos[comboKey]) {
+                mappedStatCombos[comboKey] = { statKeys: [key], nodes: [] };
+              }
+              mappedStatCombos[comboKey].nodes.push(r.node);
             });
           }
         });
       }
     });
 
-    return Object.keys(mappedStats).map((statID) => {
-      const translated = translateStat(parseInt(statID));
+    return Object.keys(mappedStatCombos).map((comboKey) => {
+      const { statKeys, nodes } = mappedStatCombos[comboKey];
+      
+      // Translate all stats and join with newline for multi-stat notables
+      const translatedStats = statKeys.map((key) => translateStat(key));
+      const combinedText = translatedStats.join('\n');
+      
       return {
-        stat: withColors ? colorMessage(translated) : translated,
-        rawStat: translated,
-        id: statID,
-        passives: mappedStats[statID]
+        stat: withColors ? colorMessage(combinedText) : combinedText,
+        rawStat: combinedText,
+        id: comboKey,
+        passives: nodes
       };
     });
   };
@@ -350,17 +381,28 @@
       case 'count':
         return combinedResults.sort((a, b) => b.passives.length - a.passives.length);
       case 'rarity':
-        return combinedResults.sort(
-          (a, b) => allPossibleStats[selectedJewel.value][a.id] - allPossibleStats[selectedJewel.value][b.id]
-        );
+        return combinedResults.sort((a, b) => {
+          // For combo keys (e.g., "123,456"), use first stat ID for rarity
+          const aId = a.id.includes(',') ? parseInt(a.id.split(',')[0]) : parseInt(a.id);
+          const bId = b.id.includes(',') ? parseInt(b.id.split(',')[0]) : parseInt(b.id);
+          return (allPossibleStats[selectedJewel.value][aId] || 0) - (allPossibleStats[selectedJewel.value][bId] || 0);
+        });
       case 'value':
         return combinedResults.sort((a, b) => {
-          const aValue = statValues[a.id] || 0;
-          const bValue = statValues[b.id] || 0;
+          // For combo keys, sum all stat values
+          const aIds = a.id.split(',').map((id) => parseInt(id));
+          const bIds = b.id.split(',').map((id) => parseInt(id));
+          const aValue = aIds.reduce((sum, id) => sum + (statValues[id] || 0), 0);
+          const bValue = bIds.reduce((sum, id) => sum + (statValues[id] || 0), 0);
+          
           if (aValue != bValue) {
             return bValue - aValue;
           }
-          return allPossibleStats[selectedJewel.value][a.id] - allPossibleStats[selectedJewel.value][b.id];
+          
+          // Fallback to rarity
+          const aId = aIds[0];
+          const bId = bIds[0];
+          return (allPossibleStats[selectedJewel.value][aId] || 0) - (allPossibleStats[selectedJewel.value][bId] || 0);
         });
     }
 
