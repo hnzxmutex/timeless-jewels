@@ -6,7 +6,20 @@ const config = {
   // Consult https://github.com/sveltejs/svelte-preprocess
   // for more information about preprocessors
   preprocess: preprocess({
-    postcss: true
+    postcss: true,
+    typescript: {
+      // Skip type checking to avoid TS 5.5+ incompatibilities with deprecated options
+      tsconfigFile: false,
+      compilerOptions: {
+        target: 'esnext',
+        module: 'esnext',
+        moduleResolution: 'node',
+        isolatedModules: true,
+        esModuleInterop: true,
+        skipLibCheck: true,
+        sourceMap: true
+      }
+    }
   }),
 
   kit: {
@@ -16,7 +29,7 @@ const config = {
       fallback: 'index.html'
     }),
     paths: {
-      base: '/timeless-jewels'
+      base: process.env.BASE_PATH || '/timeless-jewels'
     }
   }
 };

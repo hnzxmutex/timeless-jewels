@@ -1,43 +1,49 @@
-name: release
+name: Release Chrome Extension
 
 on:
   push:
     tags:
-      - v*
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    name: Release
+    name: Package & Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: 'frontend/.nvmrc'
-
-      - name: Enable corepack
-        run: corepack enable
-
-      - name: Build wasm
-        run: go build -ldflags="-s -w" -v -o frontend/static/calculator.wasm ./wasm
-        env:
-          GOOS: js
-          GOARCH: wasm
-
-      - name: Build frontend
-        working-directory: frontend
+      - name: Update manifest version
         run: |
-          pnpm install
-          pnpm run build
-          ls -lah build
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Strip leading 'v' for manifest (v1.0.0 -> 1.0.0)
+          MANIFEST_VERSION="${VERSION#v}"
+          cd extension
+          jq --arg v "$MANIFEST_VERSION" '.version = $v' manifest.json > tmp.json && mv tmp.json manifest.json
 
-      - uses: peaceiris/actions-gh-pages@v4
+      - name: Package extension
+        run: |
+          cd extension
+          zip -r ../timeless-jewel-preview-${{ steps.version.outputs.VERSION }}.zip .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./frontend/build
-          exclude_assets: ''
+          name: Timeless Jewel Preview ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Chrome 扩展安装方法
+
+            1. 下载下方的 `timeless-jewel-preview-${{ steps.version.outputs.VERSION }}.zip`
+            2. 解压到任意目录
+            3. 打开 Chrome，进入 `chrome://extensions/`
+            4. 开启右上角 **开发者模式**
+            5. 点击 **加载已解压的扩展程序**，选择解压后的目录
+            6. 前往 POE 交易页面搜索永恒珠宝，即可看到 Preview 按钮
+          files: timeless-jewel-preview-${{ steps.version.outputs.VERSION }}.zip
+          generate_release_notes: true

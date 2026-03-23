@@ -1,0 +1,47 @@
+/* Timeless Jewel Preview - Content Script Styles */
+
+/* ==================== Preview Button Wrapper ==================== */
+
+.tj-preview-wrapper {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 6px 0 2px;
+}
+
+/* ==================== Preview Button ==================== */
+
+.tj-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffd700;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid #ffd700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Fontin', 'Fontin-Regular', Verdana, Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.tj-preview-btn:hover {
+  background: linear-gradient(135deg, #2a2a4e 0%, #26315e 100%);
+  border-color: #ffed4a;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.tj-preview-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 4px rgba(255, 215, 0, 0.2);
+}
+
+.tj-preview-detail {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.8;
+}

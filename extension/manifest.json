@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Timeless Jewel Preview",
+  "version": "1.0.0",
+  "description": "Preview Timeless Jewel effects directly on POE trade pages. WASM loads once, subsequent previews are instant.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "https://vilsol.github.io/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.pathofexile.com/trade/*",
+        "*://pathofexile.com/trade/*",
+        "*://poe.game.qq.com/trade/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": [
+        "*://www.pathofexile.com/*",
+        "*://pathofexile.com/*",
+        "*://poe.game.qq.com/*"
+      ]
+    }
+  ]
+}

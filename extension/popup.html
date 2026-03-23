@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeless Jewel Preview</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+      padding: 14px 16px;
+      border-bottom: 2px solid #ffd700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-icon {
+      font-size: 20px;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffd700;
+    }
+
+    .header .version {
+      font-size: 11px;
+      color: rgba(255, 215, 0, 0.5);
+      margin-left: auto;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field input[type="text"],
+    .field input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #e0e0e0;
+      background: #0f0f23;
+      border: 1px solid #333;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      border-color: #ffd700;
+    }
+
+    .field input::placeholder {
+      color: #555;
+    }
+
+    .field .hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid #2a2a4e;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #333;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #999;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle input:checked + .slider {
+      background-color: #16213e;
+      border: 1px solid #ffd700;
+    }
+
+    .toggle input:checked + .slider::before {
+      transform: translateX(20px);
+      background-color: #ffd700;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: #0f0f23;
+      border-top: 1px solid #2a2a4e;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff3b30;
+    }
+
+    .status-dot.active {
+      background: #34c759;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #ffd700;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-save:hover {
+      background: #ffed4a;
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+    }
+
+    .btn-save:active {
+      transform: scale(0.98);
+    }
+
+    .btn-save.saved {
+      background: #34c759;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-icon">⏳</span>
+    <h1>Timeless Jewel Preview</h1>
+    <span class="version">v1.0.0</span>
+  </div>
+
+  <div class="content">
+    <div class="field">
+      <label>Calculator URL</label>
+      <input type="text" id="baseUrl" placeholder="http://localhost:5173/timeless-jewels/tree">
+      <div class="hint">Local dev: http://localhost:5173/timeless-jewels/tree</div>
+    </div>
+
+    <div class="field">
+      <label>Default Jewel Socket</label>
+      <input type="number" id="defaultLocation" placeholder="Leave empty for manual selection">
+      <div class="hint">Node ID of default jewel socket location</div>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Enable Extension</span>
+      <label class="toggle">
+        <input type="checkbox" id="enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button class="btn-save" id="saveBtn">Save Settings</button>
+  </div>
+
+  <div class="status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Loading...</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
