@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   saveBtn.addEventListener('click', () => {
     const settings = {
       enabled: enabledCheckbox.checked,
-      baseUrl: baseUrlInput.value.trim() || 'http://localhost:5173/timeless-jewels/tree',
+      baseUrl: baseUrlInput.value.trim() || 'https://hnzxmutex.github.io/timeless-jewels/tree',
       defaultLocation: defaultLocationInput.value ? parseInt(defaultLocationInput.value) : undefined
     };
 

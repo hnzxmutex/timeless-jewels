@@ -11,7 +11,7 @@
   ],
   "host_permissions": [
     "http://localhost:*/*",
-    "https://vilsol.github.io/*"
+    "https://hnzxmutex.github.io/*"
   ],
   "content_scripts": [
     {

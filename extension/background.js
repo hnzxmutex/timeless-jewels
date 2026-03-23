@@ -4,7 +4,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
   enabled: true,
-  baseUrl: 'http://localhost:5173/timeless-jewels/tree',
+  baseUrl: 'https://hnzxmutex.github.io/timeless-jewels/tree',
   defaultLocation: undefined
 };
 
@@ -87,11 +87,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!stored.settings) {
     await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
   } else {
-    // Migrate: if baseUrl still points to the old GitHub Pages, update to local
-    if (stored.settings.baseUrl === 'https://vilsol.github.io/timeless-jewels/tree') {
+    // Migrate: if baseUrl still points to the old GitHub Pages, update to new one
+    if (stored.settings.baseUrl === 'https://vilsol.github.io/timeless-jewels/tree'
+        || stored.settings.baseUrl === 'http://localhost:5173/timeless-jewels/tree') {
       stored.settings.baseUrl = DEFAULT_SETTINGS.baseUrl;
       await chrome.storage.sync.set({ settings: stored.settings });
-      console.log('[Timeless Jewels] Migrated baseUrl to local dev server');
+      console.log('[Timeless Jewels] Migrated baseUrl to new GitHub Pages');
     }
   }
 });
