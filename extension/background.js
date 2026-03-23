@@ -35,6 +35,7 @@ async function openPreview(baseUrl, params, sendResponse) {
         // The SvelteKit page already listens for 'timeless-jewels-update' messages
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
+          world: 'MAIN',
           func: (p) => {
             window.postMessage({
               type: 'timeless-jewels-update',
