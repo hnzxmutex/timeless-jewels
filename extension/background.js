@@ -4,7 +4,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
   enabled: true,
-  baseUrl: 'http://localhost:5173/timeless-jewels/tree',
+  baseUrl: 'https://hnzxmutex.github.io/timeless-jewels/tree',
   defaultLocation: undefined
 };
 
