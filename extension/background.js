@@ -4,7 +4,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
   enabled: true,
-  baseUrl: 'https://hnzxmutex.github.io/timeless-jewels/tree',
+  baseUrl: 'http://localhost:5173/timeless-jewels/tree',
   defaultLocation: undefined
 };
 
@@ -14,12 +14,39 @@ const DEFAULT_SETTINGS = {
 let previewTabId = null;
 
 /**
+ * Build a hash string from params for updating an existing tab.
+ * Using hash (#) instead of search params (?) avoids page reload.
+ * The SvelteKit page listens for 'hashchange' and applies the new params.
+ */
+function buildHash(params) {
+  const parts = [];
+  if (params.jewel !== undefined) parts.push(`jewel=${params.jewel}`);
+  if (params.conqueror !== undefined) parts.push(`conqueror=${encodeURIComponent(params.conqueror)}`);
+  if (params.seed !== undefined) parts.push(`seed=${params.seed}`);
+  if (params.location !== undefined) parts.push(`location=${params.location}`);
+  return '#' + parts.join('&');
+}
+
+/**
+ * Build the full preview URL with search params (for first-time tab creation).
+ */
+function buildPreviewUrl(baseUrl, params) {
+  const url = new URL(baseUrl);
+  if (params.jewel !== undefined) url.searchParams.set('jewel', params.jewel);
+  if (params.conqueror !== undefined) url.searchParams.set('conqueror', params.conqueror);
+  if (params.seed !== undefined) url.searchParams.set('seed', params.seed);
+  if (params.location !== undefined) url.searchParams.set('location', params.location);
+  url.searchParams.set('mode', 'seed');
+  return url.toString();
+}
+
+/**
  * Open or reuse a single preview tab.
  *
- * - First time: create a new tab with full URL params so the page initializes correctly.
- * - Subsequent times: focus the existing tab and inject a postMessage via
- *   chrome.scripting.executeScript to update params WITHOUT reloading the page.
- *   This preserves WASM state, user settings, scroll position, etc.
+ * - First time: create a new tab with full URL search params.
+ * - Subsequent times: focus the existing tab and update only the URL hash.
+ *   Changing the hash does NOT reload the page, preserving WASM state.
+ *   The frontend listens for 'hashchange' and applies the new params instantly.
  */
 async function openPreview(baseUrl, params, sendResponse) {
   try {
@@ -27,44 +54,21 @@ async function openPreview(baseUrl, params, sendResponse) {
     if (previewTabId !== null) {
       try {
         const tab = await chrome.tabs.get(previewTabId);
-        // Tab exists — focus it
-        await chrome.tabs.update(tab.id, { active: true });
+        // Tab exists — focus it and update only the hash (no page reload)
+        const currentUrl = new URL(tab.url);
+        const newUrl = currentUrl.origin + currentUrl.pathname + currentUrl.search + buildHash(params);
+        await chrome.tabs.update(tab.id, { active: true, url: newUrl });
         await chrome.windows.update(tab.windowId, { focused: true });
-
-        // Inject a tiny script to postMessage the new params into the page
-        // The SvelteKit page already listens for 'timeless-jewels-update' messages
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          world: 'MAIN',
-          func: (p) => {
-            window.postMessage({
-              type: 'timeless-jewels-update',
-              jewel: p.jewel,
-              conqueror: p.conqueror,
-              seed: p.seed,
-              location: p.location
-            }, '*');
-          },
-          args: [params]
-        });
-
         sendResponse({ success: true, tabId: tab.id, reused: true });
         return;
       } catch (e) {
-        // Tab was closed or scripting failed — reset and create a new one
+        // Tab was closed — reset and create a new one
         previewTabId = null;
       }
     }
 
-    // First time — build URL with params so the page initializes correctly
-    const url = new URL(baseUrl);
-    if (params.jewel !== undefined) url.searchParams.set('jewel', params.jewel);
-    if (params.conqueror !== undefined) url.searchParams.set('conqueror', params.conqueror);
-    if (params.seed !== undefined) url.searchParams.set('seed', params.seed);
-    if (params.location !== undefined) url.searchParams.set('location', params.location);
-    url.searchParams.set('mode', 'seed');
-
-    const tab = await chrome.tabs.create({ url: url.toString(), active: true });
+    // First time — create a new tab with full URL params
+    const tab = await chrome.tabs.create({ url: buildPreviewUrl(baseUrl, params), active: true });
     previewTabId = tab.id;
     sendResponse({ success: true, tabId: tab.id, reused: false });
   } catch (err) {
@@ -88,7 +92,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!stored.settings) {
     await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
   } else {
-    // Migrate: if baseUrl still points to the old GitHub Pages, update to new one
+    // Migrate: if baseUrl still points to old addresses, update to new GitHub Pages
     if (stored.settings.baseUrl === 'https://vilsol.github.io/timeless-jewels/tree'
         || stored.settings.baseUrl === 'http://localhost:5173/timeless-jewels/tree') {
       stored.settings.baseUrl = DEFAULT_SETTINGS.baseUrl;

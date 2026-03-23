@@ -2,7 +2,6 @@
   import SkillTree from '../../lib/components/SkillTree.svelte';
   import Select from 'svelte-select';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import type { Node } from '../../lib/skill_tree_types';
   import { getAffectedNodes, skillTree, translateStat, openTrade } from '../../lib/skill_tree';
   import { syncWrap } from '../../lib/worker';
@@ -11,7 +10,7 @@
   import SearchResults from '../../lib/components/SearchResults.svelte';
   import { statValues } from '../../lib/values';
   import { data, calculator } from '../../lib/types';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
 
   const searchParams = $page.url.searchParams;
 
@@ -93,7 +92,7 @@
       url.searchParams.append('stat', s.toString());
     });
 
-    goto(url.toString());
+    history.replaceState(null, '', url.toString());
   };
 
   const setMode = (newMode: string) => {
@@ -202,9 +201,19 @@
   };
 
   let highlighted: number[] = [];
-  const highlight = (newSeed: number, passives: number[]) => {
+  let highlightedStatId: string | undefined = undefined;
+
+  // When seedResults changes and we have a highlighted stat, re-compute the highlighted nodes
+  $: if (highlightedStatId && seedResults.length > 0) {
+    const combined = combineResults(seedResults, false, 'all');
+    const match = combined.find((r) => r.id === highlightedStatId);
+    highlighted = match ? match.passives : [];
+  }
+
+  const highlight = (newSeed: number, passives: number[], statId?: string) => {
     seed = newSeed;
     highlighted = passives;
+    highlightedStatId = statId;
     updateUrl();
   };
 
@@ -459,8 +468,137 @@
 
   $: league && localStorage.setItem('league', league.value);
 
+  // postMessage handler for browser extension communication (fallback / iframe mode)
+  const handleMessage = (event: MessageEvent) => {
+    const msg = event.data;
+    if (!msg || msg.type !== 'timeless-jewels-update') return;
+
+    // Update parameters from external source
+    if (msg.jewel !== undefined) {
+      const jewel = jewels.find((j) => j.value === msg.jewel);
+      if (jewel) {
+        selectedJewel = jewel;
+      }
+    }
+
+    if (msg.conqueror !== undefined && selectedJewel) {
+      const conq = Object.keys(data.TimelessJewelConquerors[selectedJewel.value]).find(
+        (k) => k === msg.conqueror
+      );
+      if (conq) {
+        selectedConqueror = { value: conq, label: conq };
+      }
+    }
+
+    if (msg.seed !== undefined) {
+      seed = parseInt(msg.seed);
+    }
+
+    if (msg.location !== undefined) {
+      circledNode = parseInt(msg.location);
+    }
+
+    // Don't clear highlighted/highlightedStatId here —
+    // the reactive statement will re-compute highlighted nodes
+    // from highlightedStatId once seedResults updates with the new seed.
+
+    // Switch to seed mode to show results
+    mode = 'seed';
+    results = false;
+
+    // Update URL to reflect new state
+    updateUrl();
+
+    // Send acknowledgment back with result summary after reactivity settles
+    (async () => {
+      await tick();
+
+      const source = event.source as Window;
+      if (source && typeof source.postMessage === 'function') {
+        source.postMessage({
+          type: 'timeless-jewels-ack',
+          success: true,
+          seed,
+          jewel: selectedJewel?.value,
+          conqueror: selectedConqueror?.value,
+          location: circledNode,
+          resultCount: seedResults?.length || 0
+        }, '*');
+      }
+    })();
+  };
+
+  let messageCleanup: (() => void) | undefined;
+
+  /**
+   * Handle URL hash changes from the Chrome extension.
+   * The extension updates the hash (e.g. #jewel=1&conqueror=Xibaqua&seed=12345)
+   * which does NOT reload the page, preserving WASM state.
+   */
+  const handleHashChange = () => {
+    const hash = window.location.hash.slice(1); // remove leading '#'
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+
+    if (params.has('jewel')) {
+      const jewel = jewels.find((j) => j.value === parseInt(params.get('jewel')!));
+      if (jewel) selectedJewel = jewel;
+    }
+
+    if (params.has('conqueror') && selectedJewel) {
+      const conq = Object.keys(data.TimelessJewelConquerors[selectedJewel.value]).find(
+        (k) => k === params.get('conqueror')
+      );
+      if (conq) selectedConqueror = { value: conq, label: conq };
+    }
+
+    if (params.has('seed')) {
+      seed = parseInt(params.get('seed')!);
+    }
+
+    if (params.has('location')) {
+      circledNode = parseInt(params.get('location')!);
+    }
+
+    mode = 'seed';
+    results = false;
+    updateUrl();
+
+    // Clear hash after processing so the same params can be sent again
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  };
+
   onMount(() => {
     getLeagues();
+
+    // Listen for postMessage — used by both:
+    // 1. chrome.scripting.executeScript injected by background (shared tab mode)
+    // 2. iframe parent postMessage (legacy iframe mode)
+    window.addEventListener('message', handleMessage);
+
+    // Listen for hash changes — used by Chrome extension to update params
+    // without reloading the page (preserves WASM state)
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Also check hash on initial load (in case extension set it before page loaded)
+    if (window.location.hash.length > 1) {
+      handleHashChange();
+    }
+
+    messageCleanup = () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+
+    // Notify parent that page is ready (still works if opened in iframe)
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'timeless-jewels-ready' }, '*');
+    }
+  });
+
+  onDestroy(() => {
+    messageCleanup?.();
   });
 </script>
 
@@ -584,7 +722,7 @@
                   {#if !split}
                     <ul class="mt-4 overflow-auto" class:rainbow={colored}>
                       {#each sortCombined(combineResults(seedResults, colored, 'all'), sortOrder.value) as r}
-                        <li class="cursor-pointer" on:click={() => highlight(seed, r.passives)}>
+                        <li class="cursor-pointer" on:click={() => highlight(seed, r.passives, r.id)}>
                           <span class="font-bold" class:text-white={(statValues[r.id] || 0) < 3}
                             >({r.passives.length})</span>
                           <span class="text-white">{@html r.stat}</span>
@@ -596,7 +734,7 @@
                       <h3>Notables</h3>
                       <ul class="mt-1" class:rainbow={colored}>
                         {#each sortCombined(combineResults(seedResults, colored, 'notables'), sortOrder.value) as r}
-                          <li class="cursor-pointer" on:click={() => highlight(seed, r.passives)}>
+                          <li class="cursor-pointer" on:click={() => highlight(seed, r.passives, r.id)}>
                             <span class="font-bold" class:text-white={(statValues[r.id] || 0) < 3}
                               >({r.passives.length})</span>
                             <span class="text-white">{@html r.stat}</span>
@@ -607,7 +745,7 @@
                       <h3 class="mt-2">Smalls</h3>
                       <ul class="mt-1" class:rainbow={colored}>
                         {#each sortCombined(combineResults(seedResults, colored, 'passives'), sortOrder.value) as r}
-                          <li class="cursor-pointer" on:click={() => highlight(seed, r.passives)}>
+                          <li class="cursor-pointer" on:click={() => highlight(seed, r.passives, r.id)}>
                             <span class="font-bold" class:text-white={(statValues[r.id] || 0) < 3}
                               >({r.passives.length})</span>
                             <span class="text-white">{@html r.stat}</span>
