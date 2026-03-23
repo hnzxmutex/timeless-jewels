@@ -49,6 +49,60 @@
 - 增加 Chrome 扩展，支持在 POE 交易页面直接预览永恒珠宝效果
 - 支持国服（`poe.game.qq.com`）交易页面
 - 添加 GitHub Pages 自动部署工作流
+- 新增第 6 种永恒珠宝 **Heroic Tragedy（英雄的悲剧）** 支持（POE 3.28 Kalguur），新增征服者 Vorana / Uhtred / Medved
+
+---
+
+<details>
+<summary>English</summary>
+
+A **Timeless Jewel Calculator** for Path of Exile (POE) with passive tree visualization preview. This fork adds a **Chrome extension** for previewing timeless jewel effects directly on POE trade pages (both Tencent and official servers).
+
+### Online Calculator
+
+**Live version**: [https://hnzxmutex.github.io/timeless-jewels](https://hnzxmutex.github.io/timeless-jewels)
+
+Steps:
+1. Select jewel type (Glorious Vanity / Lethal Pride / Brutal Restraint / Militant Faith / Elegant Hubris / **Heroic Tragedy**)
+2. Select a conqueror
+3. Enter seed number
+4. View each affected passive node on the skill tree
+
+### Chrome Extension (Trade Page Preview)
+
+A Chrome extension is included to inject **Preview** buttons on POE trade websites (`poe.game.qq.com` / `pathofexile.com`) when browsing timeless jewels.
+
+#### Installation
+
+1. Download the latest `timeless-jewel-preview-vX.X.X.zip` from [Releases](https://github.com/hnzxmutex/timeless-jewels/releases)
+2. Extract to any directory
+3. Open Chrome and navigate to `chrome://extensions/`
+4. Enable **Developer mode** (top right)
+5. Click **Load unpacked** and select the extracted directory
+6. Visit a POE trade page and search for timeless jewels — the extension will auto-detect and inject Preview buttons
+
+### Changes from Original Fork
+
+- Added Chrome extension for direct timeless jewel preview on POE trade pages
+- Support for Chinese server (`poe.game.qq.com`) trade pages
+- Added GitHub Pages auto-deploy workflow
+- Added **Heroic Tragedy** (3.28 Kalguur) support — new conquerors: Vorana / Uhtred / Medved
+
+### Credits
+
+> **Forked from [Vilsol/timeless-jewels](https://github.com/Vilsol/timeless-jewels)**
+>
+> Original author: [Vilsol](https://github.com/Vilsol)
+>
+> Original live version: [https://vilsol.github.io/timeless-jewels](https://vilsol.github.io/timeless-jewels)
+>
+> Data source: [Vilsol/go-pob-data](https://github.com/Vilsol/go-pob-data)
+
+### License
+
+This project inherits the original project's [GNU General Public License v3.0](LICENSE).
+
+</details>
 
 ## 📄 许可证
 
