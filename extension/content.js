@@ -291,11 +291,43 @@
     }
   }
 
+  // ==================== Search Button Trigger ====================
+
+  /**
+   * Attach click listener to the search button to re-render preview buttons.
+   * The search button refreshes the result list, so we need to re-process items.
+   */
+  function attachSearchButtonListener() {
+    const searchBtn = document.querySelector('.controls .search-btn');
+    if (searchBtn && !searchBtn.hasAttribute('data-tj-listener')) {
+      searchBtn.setAttribute('data-tj-listener', 'true');
+      searchBtn.addEventListener('click', () => {
+        console.log('[Timeless Jewels] Search button clicked, re-processing listings...');
+        // Clear processed flags to allow re-injection
+        document.querySelectorAll('[data-tj-processed]').forEach((el) => {
+          el.removeAttribute('data-tj-processed');
+        });
+        // Wait for new results to load, then re-process
+        setTimeout(processItemListings, 500);
+      });
+      console.log('[Timeless Jewels] Search button listener attached');
+    }
+  }
+
   // ==================== Lifecycle ====================
 
   function init() {
     console.log('[Timeless Jewels] Extension initialized');
     startObserving();
+    attachSearchButtonListener();
+    
+    // Re-attach search button listener if the button appears later
+    const recheckSearchBtn = setInterval(() => {
+      attachSearchButtonListener();
+    }, 2000);
+    
+    // Stop rechecking after 60s
+    setTimeout(() => clearInterval(recheckSearchBtn), 60000);
   }
 
   function cleanup() {
