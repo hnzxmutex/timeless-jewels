@@ -42,7 +42,11 @@
     cadiro:   { jewelType: 5, displayName: 'Cadiro' },
     victario: { jewelType: 5, displayName: 'Victario' },
     chitus:   { jewelType: 5, displayName: 'Chitus' },
-    caspiro:  { jewelType: 5, displayName: 'Caspiro' }
+    caspiro:  { jewelType: 5, displayName: 'Caspiro' },
+    // Heroic Tragedy (英雄的悲剧) → type 6
+    vorana:   { jewelType: 6, displayName: 'Vorana' },
+    uhtred:   { jewelType: 6, displayName: 'Uhtred' },
+    medved:   { jewelType: 6, displayName: 'Medved' }
   };
 
   // Jewel type ID → English name (for display)
@@ -51,7 +55,8 @@
     2: 'Lethal Pride',
     3: 'Brutal Restraint',
     4: 'Militant Faith',
-    5: 'Elegant Hubris'
+    5: 'Elegant Hubris',
+    6: 'Heroic Tragedy'
   };
 
   // ==================== State ====================
